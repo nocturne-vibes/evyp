@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evy — Prompt Studio</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#060608;--s1:#0d0d10;--s2:#141417;--s3:#1c1c20;
+  --bd:#28282e;--bd2:#34343c;
+  --tx:#f2f2f6;--sub:#88889a;--mut:#46464f;
+  --in:#6366f1;--cy:#06b6d4;--em:#10b981;--ro:#f43f5e;--am:#f59e0b;
+  --g1:linear-gradient(135deg,#6366f1,#06b6d4);
+  --gr:linear-gradient(135deg,#10b981,#06b6d4);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden;}
+
+/* ════ LAMP BACKGROUND ════ */
+.lamp{
+  position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;
+}
+/* left beam */
+.lamp-l{
+  position:absolute;top:0;right:50%;
+  width:38vw;height:55vh;
+  background:conic-gradient(from 70deg at 100% 0%, #06b6d4 0deg, transparent 50deg);
+  opacity:.18;
+  mask-image:linear-gradient(to bottom, white 0%, transparent 100%);
+  -webkit-mask-image:linear-gradient(to bottom, white 0%, transparent 100%);
+}
+/* right beam */
+.lamp-r{
+  position:absolute;top:0;left:50%;
+  width:38vw;height:55vh;
+  background:conic-gradient(from 290deg at 0% 0%, #06b6d4 0deg, transparent 50deg);
+  opacity:.18;
+  mask-image:linear-gradient(to bottom, white 0%, transparent 100%);
+  -webkit-mask-image:linear-gradient(to bottom, white 0%, transparent 100%);
+}
+/* glow blob */
+.lamp-glow{
+  position:absolute;top:-60px;left:50%;transform:translateX(-50%);
+  width:380px;height:380px;border-radius:50%;
+  background:radial-gradient(ellipse, #06b6d440 0%, transparent 68%);
+  animation:lampPulse 4s ease-in-out infinite;
+}
+@keyframes lampPulse{0%,100%{opacity:.7;transform:translateX(-50%) scale(1);}50%{opacity:1;transform:translateX(-50%) scale(1.08);}}
+/* top line */
+.lamp-line{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:0;height:1px;
+  background:linear-gradient(to right,transparent,#06b6d4 30%,#22d3ee 50%,#06b6d4 70%,transparent);
+  box-shadow:0 0 12px 3px #06b6d4,0 0 40px 10px #06b6d418;
+  animation:lineExpand 1.2s 0.2s ease-out both;
+}
+@keyframes lineExpand{from{width:0;}to{width:min(420px,80vw);}}
+.lamp-dot{
+  position:absolute;top:-4px;left:50%;transform:translateX(-50%);
+  width:8px;height:8px;border-radius:50%;
+  background:#22d3ee;
+  box-shadow:0 0 10px 3px #22d3ee,0 0 28px 8px #06b6d455;
+  animation:dotAppear .5s .8s ease-out both;
+}
+@keyframes dotAppear{from{opacity:0;transform:translateX(-50%) scale(0);}to{opacity:1;transform:translateX(-50%) scale(1);}}
+/* bottom dark fade */
+.lamp-fade{
+  position:absolute;bottom:0;left:0;right:0;height:45%;
+  background:linear-gradient(to top,var(--bg) 0%,transparent 100%);
+}
+
+/* ════ LANG ════ */
+.lbar{position:fixed;top:.8rem;right:.8rem;z-index:900;}
+.lsel{background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--sub);font-family:'Inter',sans-serif;font-size:.72rem;font-weight:600;padding:.35rem .7rem;cursor:pointer;outline:none;}
+.lsel:hover{border-color:var(--cy);}
+.lsel option{background:var(--s2);}
+
+/* ════ MODAL ════ */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(10px);}
+.modal{background:var(--s1);border:1px solid var(--bd2);border-radius:20px;padding:2.5rem 2rem;max-width:400px;width:100%;text-align:center;animation:up .4s ease;position:relative;z-index:1;}
+.modal-logo{font-size:2.4rem;font-weight:900;letter-spacing:-.05em;background:var(--g1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.15rem;}
+.modal-tag{font-size:.7rem;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.12em;margin-bottom:1.5rem;}
+.minput{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:.82rem 1rem;font-size:.9rem;color:var(--tx);font-family:'Inter',sans-serif;outline:none;transition:border .2s;margin-bottom:1.2rem;}
+.minput:focus{border-color:var(--in);}
+.minput::placeholder{color:var(--mut);}
+.vl{font-size:.68rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.65rem;text-align:left;}
+.vg{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1.4rem;}
+.vc{background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:.7rem .5rem;font-size:.79rem;font-weight:600;color:var(--sub);cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;}
+.vc:hover{border-color:var(--cy);color:var(--tx);}
+.vc.on{border-color:var(--in);background:#6366f112;color:var(--tx);}
+
+/* ════ HERO ════ */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:3rem 2rem;position:relative;z-index:1;}
+.hero-logo{font-size:clamp(1rem,2vw,1.2rem);font-weight:700;color:var(--sub);letter-spacing:.22em;text-transform:uppercase;margin-bottom:.5rem;}
+.hero h1{font-size:clamp(3.2rem,7.5vw,6rem);font-weight:900;line-height:.95;letter-spacing:-.04em;margin-bottom:1.1rem;}
+.hero h1 span{background:var(--g1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-desc{font-size:clamp(.88rem,1.8vw,1.05rem);color:var(--sub);max-width:460px;line-height:1.8;margin-bottom:2.2rem;}
+.hero-desc strong{color:var(--cy);}
+.pill{display:inline-flex;align-items:center;gap:.5rem;background:var(--s2);border:1px solid var(--bd2);border-radius:999px;padding:.3rem 1rem;font-size:.7rem;font-weight:600;color:var(--sub);letter-spacing:.04em;margin-bottom:1.6rem;}
+.pill-dot{width:6px;height:6px;border-radius:50%;background:var(--em);box-shadow:0 0 7px var(--em);animation:dotBlink 2s ease-in-out infinite;}
+@keyframes dotBlink{0%,100%{opacity:1;}50%{opacity:.4;}}
+.btn{background:var(--g1);padding:.85rem 2.6rem;border-radius:10px;font-size:.93rem;font-weight:700;border:none;color:#fff;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.01em;transition:transform .2s,box-shadow .2s;box-shadow:0 0 28px #6366f128;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 0 44px #06b6d430;}
+
+/* ════ APP ════ */
+#app{display:none;max-width:620px;margin:0 auto;padding:2rem 1.5rem 6rem;position:relative;z-index:1;}
+.pbar{height:2px;background:var(--s3);border-radius:999px;margin-bottom:2rem;}
+.pf{height:100%;background:var(--g1);border-radius:999px;transition:width .4s;}
+.sw{display:none;}
+.sw.on{display:block;animation:up .32s ease;}
+@keyframes up{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.snum{font-size:.64rem;font-weight:700;color:var(--in);text-transform:uppercase;letter-spacing:.14em;margin-bottom:.35rem;}
+.sq{font-size:1.3rem;font-weight:800;margin-bottom:.3rem;letter-spacing:-.02em;}
+.sh{font-size:.8rem;color:var(--mut);margin-bottom:1.3rem;}
+
+/* ════ CHIPS — VISIBLE ════ */
+.cg{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.2rem;}
+.ch{
+  background:var(--s2);border:1px solid var(--bd);border-radius:8px;
+  padding:.48rem .88rem;font-size:.8rem;font-weight:600;color:var(--sub);
+  cursor:pointer;transition:all .18s;font-family:'Inter',sans-serif;
+  display:inline-block;
+}
+.ch:hover{border-color:var(--cy);color:var(--tx);background:var(--s3);}
+.ch.on{border-color:var(--in);background:#6366f112;color:var(--tx);}
+
+.cinput{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:.75rem 1rem;font-size:.88rem;color:var(--tx);font-family:'Inter',sans-serif;outline:none;transition:border .2s;margin-top:.5rem;}
+.cinput:focus{border-color:var(--in);}
+.cinput::placeholder{color:var(--mut);}
+.ta{width:100%;background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:1rem 1.1rem;font-size:.88rem;color:var(--tx);font-family:'Inter',sans-serif;resize:none;min-height:96px;outline:none;transition:border .2s;line-height:1.75;}
+.ta:focus{border-color:var(--in);}
+.ta::placeholder{color:var(--mut);}
+.sug-label{font-size:.64rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.55rem;display:flex;align-items:center;gap:.4rem;}
+.sug-label::before{content:'';width:2px;height:10px;background:var(--g1);border-radius:1px;display:inline-block;}
+.sug{display:block;width:100%;background:var(--s1);border:1px solid var(--bd);border-radius:7px;padding:.44rem .88rem;font-size:.76rem;font-weight:500;color:var(--sub);cursor:pointer;transition:all .18s;text-align:left;font-family:'Inter',sans-serif;margin-bottom:.38rem;line-height:1.4;}
+.sug:hover{border-color:var(--cy);color:var(--tx);}
+.nav{display:flex;gap:.6rem;margin-top:1.2rem;}
+.bbk{background:transparent;border:1px solid var(--bd);padding:.6rem 1.2rem;border-radius:8px;color:var(--mut);font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;font-size:.82rem;transition:all .18s;}
+.bbk:hover{border-color:var(--cy);color:var(--tx);}
+.bgo{background:var(--g1);padding:.63rem 1.7rem;border-radius:8px;color:#fff;font-weight:700;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:.88rem;transition:transform .18s,box-shadow .18s;box-shadow:0 0 16px #6366f128;}
+.bgo:hover{transform:translateY(-1px);box-shadow:0 0 26px #06b6d430;}
+
+/* ════ RESULT ════ */
+#res{display:none;}
+.res-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;}
+.res-title{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;}
+.res-title span{background:var(--g1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.regen-btn{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:.38rem .85rem;font-size:.73rem;font-weight:700;color:var(--sub);cursor:pointer;font-family:'Inter',sans-serif;transition:all .18s;}
+.regen-btn:hover{border-color:var(--cy);color:var(--tx);}
+
+/* Prompt card with lamp border glow */
+.prompt-card{
+  background:linear-gradient(145deg,var(--s1),var(--s2));
+  border:1px solid var(--bd2);border-radius:16px;padding:1.6rem;margin-bottom:.9rem;
+  position:relative;
+  box-shadow:0 0 60px #6366f108,0 0 0 1px #6366f115 inset;
+}
+.prompt-card::before{
+  content:'';position:absolute;top:-1px;left:50%;transform:translateX(-50%);
+  width:60%;height:1px;
+  background:linear-gradient(to right,transparent,#06b6d4 30%,#22d3ee 50%,#06b6d4 70%,transparent);
+  box-shadow:0 0 10px 2px #06b6d430;border-radius:999px;
+}
+.pc-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;}
+.pc-badge{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--in);background:#6366f112;padding:.22rem .65rem;border-radius:999px;border:1px solid #6366f128;}
+.pc-words{font-size:.66rem;color:var(--mut);}
+#pt{font-family:'JetBrains Mono',monospace;font-size:.79rem;line-height:1.88;color:#c4c4d4;white-space:pre-wrap;max-height:260px;overflow-y:auto;padding-right:.3rem;}
+#pt::-webkit-scrollbar{width:3px;}
+#pt::-webkit-scrollbar-thumb{background:var(--in);border-radius:3px;}
+
+.copy-btn{width:100%;background:var(--g1);border:none;border-radius:10px;padding:.95rem;font-family:'Inter',sans-serif;font-size:.9rem;font-weight:700;color:#fff;cursor:pointer;transition:all .25s;margin-bottom:1.1rem;display:flex;align-items:center;justify-content:center;gap:.5rem;letter-spacing:.01em;box-shadow:0 0 22px #6366f128;}
+.copy-btn:hover{transform:translateY(-1px);box-shadow:0 0 38px #06b6d440;}
+.copy-btn.done{background:var(--gr);box-shadow:0 0 22px #10b98128;}
+.divider{display:flex;align-items:center;gap:.7rem;margin:.4rem 0 .9rem;color:var(--mut);font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--bd);}
+.ai-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.55rem;margin-bottom:1.1rem;}
+.ai-b{border-radius:10px;padding:.75rem .4rem;font-family:'Inter',sans-serif;font-weight:700;font-size:.7rem;cursor:pointer;border:1px solid var(--bd);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:.3rem;background:var(--s1);color:var(--sub);position:relative;}
+.ai-b .i{font-size:1.15rem;}
+.ai-b:hover{transform:translateY(-2px);}
+.ai-b.best{border-color:var(--in);color:var(--tx);background:#6366f10a;}
+.ai-b.best::after{content:'★';position:absolute;top:-7px;right:-3px;background:var(--g1);color:#fff;font-size:.48rem;width:13px;height:13px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.ac:hover,.ac.best{border-color:var(--in);color:#818cf8;background:#6366f10e;}
+.ah:hover,.ah.best{border-color:#10a37f;color:#34d399;background:#10a37f0e;}
+.ag:hover,.ag.best{border-color:#4285f4;color:#7ab4f5;background:#4285f40e;}
+.ad:hover,.ad.best{border-color:var(--cy);color:var(--cy);background:#06b6d40e;}
+.agr:hover,.agr.best{border-color:var(--am);color:var(--am);background:#f59e0b0e;}
+
+/* ════ GALLERY CARDS (resources) ════ */
+.gc-section{margin-bottom:1.1rem;}
+.gc-title{font-size:.62rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.65rem;display:flex;align-items:center;gap:.4rem;}
+.gc-title::before{content:'';width:2px;height:10px;background:var(--g1);border-radius:1px;display:inline-block;}
+.gc-row{display:flex;gap:.65rem;overflow-x:auto;padding-bottom:.4rem;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;}
+.gc-row::-webkit-scrollbar{height:2px;}
+.gc-row::-webkit-scrollbar-thumb{background:var(--in);border-radius:2px;}
+.gc-card{
+  flex:0 0 135px;height:168px;border-radius:12px;overflow:hidden;
+  position:relative;border:1px solid var(--bd);scroll-snap-align:start;
+  transition:border-color .22s,transform .22s;background:var(--s2);
+  display:flex;flex-direction:column;
+}
+.gc-card:hover{border-color:var(--in);transform:translateY(-3px);}
+/* top section = icon area */
+.gc-top{
+  height:58%;display:flex;align-items:center;justify-content:center;
+  font-size:2.2rem;transition:transform .4s cubic-bezier(.4,0,.2,1);
+  background:var(--s3);flex-shrink:0;
+}
+.gc-card:hover .gc-top{transform:translateY(-92%);}
+/* bottom reveal */
+.gc-bot{
+  position:absolute;bottom:0;left:0;right:0;height:58%;
+  padding:.7rem;background:var(--s2);border-top:1px solid var(--bd);
+  transform:translateY(101%);transition:transform .4s cubic-bezier(.4,0,.2,1);
+}
+.gc-card:hover .gc-bot{transform:translateY(0);}
+/* static bottom title (non-hover) */
+.gc-static{
+  flex:1;padding:.6rem .7rem;display:flex;flex-direction:column;justify-content:flex-end;
+}
+.gc-name{font-size:.74rem;font-weight:700;color:var(--tx);line-height:1.3;margin-bottom:.15rem;}
+.gc-auth{font-size:.62rem;color:var(--mut);}
+.gc-link{font-size:.68rem;color:var(--cy);font-weight:600;text-decoration:none;line-height:1.4;display:block;}
+.gc-link:hover{text-decoration:underline;}
+.gc-arr{
+  position:absolute;bottom:.4rem;right:.4rem;width:18px;height:18px;
+  border-radius:50%;background:var(--g1);border:none;color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:.6rem;
+  cursor:pointer;transition:transform .2s;text-decoration:none;line-height:1;
+}
+.gc-arr:hover{transform:rotate(-45deg);}
+
+.rst{display:block;margin:.8rem auto 0;background:transparent;border:none;color:var(--mut);font-family:'Inter',sans-serif;font-size:.78rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
+.rst:hover{color:var(--cy);}
+
+/* ════ TOAST ════ */
+.toast{position:fixed;bottom:1.8rem;left:50%;transform:translateX(-50%) translateY(80px);padding:.7rem 1.4rem;border-radius:8px;font-weight:700;font-size:.8rem;transition:transform .3s;z-index:9999;pointer-events:none;border:1px solid;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.tg{background:var(--s1);border-color:var(--em);color:var(--em);}
+.tb{background:var(--s1);border-color:var(--in);color:#818cf8;}
+.tr{background:var(--s1);border-color:var(--ro);color:var(--ro);}
+</style>
+</head>
+<body>
+
+<!-- ═══ LAMP BACKGROUND (persistent on all pages) ═══ -->
+<div class="lamp">
+  <div class="lamp-l"></div>
+  <div class="lamp-r"></div>
+  <div class="lamp-glow"></div>
+  <div class="lamp-line"></div>
+  <div class="lamp-dot"></div>
+  <div class="lamp-fade"></div>
+</div>
+
+<!-- LANG -->
+<div class="lbar"><select class="lsel" id="ls" onchange="setLang(this.value)">
+  <option value="en">🇬🇧 EN</option><option value="id">🇮🇩 ID</option>
+  <option value="es">🇪🇸 ES</option><option value="fr">🇫🇷 FR</option>
+  <option value="de">🇩🇪 DE</option><option value="pt">🇧🇷 PT</option>
+  <option value="ar">🇸🇦 AR</option><option value="zh">🇨🇳 ZH</option>
+  <option value="ja">🇯🇵 JA</option><option value="hi">🇮🇳 HI</option>
+  <option value="tr">🇹🇷 TR</option><option value="ru">🇷🇺 RU</option>
+</select></div>
+
+<!-- PROFILE MODAL -->
+<div class="overlay" id="pm">
+  <div class="modal">
+    <div class="modal-logo">evy</div>
+    <div class="modal-tag">AI Prompt Studio</div>
+    <input class="minput" id="pn" placeholder="What's your name?" maxlength="28">
+    <div class="vl">How do you like to communicate?</div>
+    <div class="vg">
+      <div class="vc" onclick="pv('chill',this)">😎 Chill & Casual</div>
+      <div class="vc" onclick="pv('pro',this)">💼 Professional</div>
+      <div class="vc" onclick="pv('fun',this)">🎉 Fun & Playful</div>
+      <div class="vc" onclick="pv('direct',this)">⚡ Direct & Fast</div>
+    </div>
+    <button class="btn" onclick="saveProf()" style="width:100%;padding:.85rem;">Let's Go →</button>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero" id="hero" style="display:none;">
+  <div class="hero-logo">evy</div>
+  <h1>The Prompt<br><span>Studio.</span></h1>
+  <div class="pill"><span class="pill-dot"></span>Craft perfect AI prompts instantly</div>
+  <p class="hero-desc">Tell me what you need to learn. I'll craft a <strong>unique, detailed prompt</strong> tailored to you — ready to paste into any AI.</p>
+  <button class="btn" onclick="startApp()" id="hb">Start →</button>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="pbar"><div class="pf" id="pf" style="width:0%"></div></div>
+
+  <!-- STEP 1: TOPIC -->
+  <div class="sw on" id="s1">
+    <div class="snum" id="sn1">Step 1 of 4</div>
+    <div class="sq" id="sq1">What do you want to learn? 🎯</div>
+    <div class="sh" id="sh1">Pick one topic below</div>
+    <div class="cg" id="tc"></div>
+    <div id="ot-wrap" style="display:none;"><input class="cinput" id="ot" placeholder="Type your topic (e.g. Cooking, Law, Philosophy...)" maxlength="60" oninput="st.topicKey='Other';st.topic=this.value.trim();"></div>
+    <div class="nav"><button class="bgo" id="bn1" onclick="go(1)">Next →</button></div>
+  </div>
+
+  <!-- STEP 2: LEVEL -->
+  <div class="sw" id="s2">
+    <div class="snum" id="sn2">Step 2 of 4</div>
+    <div class="sq" id="sq2">What's your level? 📊</div>
+    <div class="sh" id="sh2">Be honest — this shapes everything</div>
+    <div class="cg" id="lc"></div>
+    <div class="nav"><button class="bbk" id="bb2" onclick="go(-1)">← Back</button><button class="bgo" id="bn2" onclick="go(1)">Next →</button></div>
+  </div>
+
+  <!-- STEP 3: GOAL -->
+  <div class="sw" id="s3">
+    <div class="snum" id="sn3">Step 3 of 4</div>
+    <div class="sq" id="sq3">What's your main goal? 🏆</div>
+    <div class="sh" id="sh3">Pick the one that matters most</div>
+    <div class="cg" id="gc"></div>
+    <div class="nav"><button class="bbk" id="bb3" onclick="go(-1)">← Back</button><button class="bgo" id="bn3" onclick="go(1)">Next →</button></div>
+  </div>
+
+  <!-- STEP 4: DETAILS -->
+  <div class="sw" id="s4">
+    <div class="snum" id="sn4">Step 4 of 4</div>
+    <div class="sq" id="sq4">Describe your question 💬</div>
+    <div class="sh" id="sh4">Your words make the prompt unique — or tap a suggestion</div>
+    <div id="sg-wrap">
+      <div class="sug-label" id="sl">💡 Quick suggestions:</div>
+      <div id="sc"></div>
+    </div>
+    <textarea class="ta" id="det" maxlength="500" rows="4"></textarea>
+    <div style="text-align:right;font-size:.66rem;color:var(--mut);margin-top:.3rem;" id="cc">0 / 500</div>
+    <div class="nav"><button class="bbk" id="bb4" onclick="go(-1)">← Back</button><button class="bgo" id="bn4" onclick="build()">Build Prompt ✦</button></div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="res">
+    <div class="res-head">
+      <div class="res-title">Your <span>Prompt</span> ✦</div>
+      <button class="regen-btn" onclick="regen()">↻ New Variant</button>
+    </div>
+    <div class="prompt-card">
+      <div class="pc-meta">
+        <span class="pc-badge" id="pb">Crafted for you</span>
+        <span class="pc-words" id="wc"></span>
+      </div>
+      <div id="pt"></div>
+    </div>
+    <button class="copy-btn" id="cb" onclick="copyP()"><span id="ci">📋</span><span id="cl">Copy Prompt</span></button>
+    <div class="divider">Or send directly to an AI</div>
+    <div class="ai-row">
+      <button class="ai-b ac" id="ai-c" onclick="openAI('claude','https://claude.ai/new')"><span class="i">🟣</span>Claude</button>
+      <button class="ai-b ah" id="ai-h" onclick="openAI('chatgpt','https://chatgpt.com/')"><span class="i">🟢</span>ChatGPT</button>
+      <button class="ai-b ag" id="ai-g" onclick="openAI('gemini','https://gemini.google.com/app')"><span class="i">🔵</span>Gemini</button>
+      <button class="ai-b ad" id="ai-d" onclick="openAI('deepseek','https://chat.deepseek.com/')"><span class="i">🌊</span>DeepSeek</button>
+      <button class="ai-b agr" id="ai-r" onclick="openAI('grok','https://grok.x.ai/')"><span class="i">⚡</span>Grok</button>
+    </div>
+
+    <!-- GALLERY RESOURCES -->
+    <div id="rg"></div>
+
+    <button class="rst" id="rst" onclick="restart()">↩ Ask something else</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ════ PROFILE ════ */
+let prof={name:'',vibe:'chill'}, sv='chill';
+function pv(v,el){sv=v;document.querySelectorAll('.vc').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
+async function saveProf(){
+  const n=document.getElementById('pn').value.trim();
+  if(!n){toast('Please enter your name','r');return;}
+  prof={name:n,vibe:sv};
+  try{await window.storage.set('evy-prof',JSON.stringify(prof));}catch(e){}
+  document.getElementById('pm').style.display='none';
+  document.getElementById('hero').style.display='flex';
+  document.querySelector('#hero h1').innerHTML=`Welcome,<br><span>${n}.</span>`;
+}
+async function loadProf(){
+  try{const r=await window.storage.get('evy-prof');if(r&&r.value){prof=JSON.parse(r.value);return true;}}catch(e){}
+  return false;
+}
+
+/* ════ STATE ════ */
+let st={topicKey:'',topic:'',level:'',goal:'',details:''};
+let lang='en', curStep=1, curPrompt='', usedIdx=-1;
+
+/* ════ COPY ════ */
+function cp(t){
+  if(navigator.clipboard&&window.isSecureContext)return navigator.clipboard.writeText(t).then(()=>true).catch(()=>Promise.resolve(fb(t)));
+  return Promise.resolve(fb(t));
+}
+function fb(t){
+  const el=document.createElement('textarea');el.value=t;el.style.cssText='position:fixed;opacity:0;';
+  document.body.appendChild(el);el.focus();el.select();
+  try{const ok=document.execCommand('copy');document.body.removeChild(el);return ok;}
+  catch(e){document.body.removeChild(el);return false;}
+}
+
+/* ════ TRANSLATIONS (core only, others inherit en) ════ */
+const LANG_NAMES={en:'English',id:'Indonesian (Bahasa Indonesia)',es:'Spanish',fr:'French',de:'German',pt:'Portuguese',ar:'Arabic',zh:'Chinese',ja:'Japanese',hi:'Hindi',tr:'Turkish',ru:'Russian'};
+const T={
+  en:{
+    sn:['Step 1 of 4','Step 2 of 4','Step 3 of 4','Step 4 of 4'],
+    sq:['What do you want to learn? 🎯',"What's your level? 📊",'What\'s your main goal? 🏆','Describe your question 💬'],
+    sh:['Pick one topic below','Be honest — this shapes everything','Pick the one that matters most','Your words make the prompt unique — or tap a suggestion'],
+    ta:'e.g. I want to build a login page but don\'t know how forms work...',
+    bb:'← Back',bn:'Next →',bld:'Build Prompt ✦',
+    cb:'Copy Prompt',cd:'✅ Copied!',rst:'↩ Ask something else',sl:'💡 Quick suggestions:',
+    nt:'Pick a topic first!',nl:'Pick your level!',ng:'Pick your goal!',nd:'Describe your question!',nn:'Enter your name!',
+    tc:['💻 Coding','🎨 Design','📐 Math','✍️ Writing','🌍 Language','💼 Business','🔬 Science','🎵 Music','📸 Photography','💪 Health & Fitness','📜 History','📈 Trading','💰 Investing','➕ Other'],
+    tk:['Coding','Design','Math','Writing','Language','Business','Science','Music','Photography','Health & Fitness','History','Trading','Investing','Other'],
+    lv:['🐣 Complete Beginner','🌱 Know a Little','🔥 Intermediate','🚀 Advanced'],
+    lk:['a complete beginner with no prior knowledge','someone who knows a little but still gets confused','at an intermediate level with some real experience','an advanced learner who wants to go much deeper'],
+    gv:['🧠 Understand deeply','🛠️ Build something','🔧 Solve a problem','📝 Exam / Interview','💼 Apply at work','🏗️ Start from scratch'],
+    gk:['understand this concept so deeply I could teach it to someone else','actually build or create something real using this skill','solve a very specific problem I am currently stuck on','prepare for an upcoming exam or job interview','apply this professionally in my work or freelance projects','learn this properly from the very beginning and build a solid foundation'],
+    pl:'English'
+  },
+  id:{
+    sn:['Langkah 1 dari 4','Langkah 2 dari 4','Langkah 3 dari 4','Langkah 4 dari 4'],
+    sq:['Apa yang ingin dipelajari? 🎯','Apa levelmu? 📊','Apa tujuan utamamu? 🏆','Ceritakan pertanyaanmu 💬'],
+    sh:['Pilih satu topik di bawah','Jujur ya — ini sangat berpengaruh','Pilih yang paling penting','Kata-katamu membuat prompt unik — atau ketuk saran'],
+    ta:'mis. Aku mau buat halaman login tapi tidak tahu cara kerja form...',
+    bb:'← Kembali',bn:'Lanjut →',bld:'Buat Prompt ✦',
+    cb:'Salin Prompt',cd:'✅ Tersalin!',rst:'↩ Tanya hal lain',sl:'💡 Saran cepat:',
+    nt:'Pilih topik dulu!',nl:'Pilih levelmu!',ng:'Pilih tujuanmu!',nd:'Ceritakan pertanyaanmu!',nn:'Masukkan namamu!',
+    tc:['💻 Coding','🎨 Desain','📐 Matematika','✍️ Menulis','🌍 Bahasa','💼 Bisnis','🔬 Sains','🎵 Musik','📸 Fotografi','💪 Kesehatan','📜 Sejarah','📈 Trading','💰 Investasi','➕ Lainnya'],
+    tk:['Coding','Design','Math','Writing','Language','Business','Science','Music','Photography','Health & Fitness','History','Trading','Investing','Other'],
+    lv:['🐣 Pemula Total','🌱 Tahu Sedikit','🔥 Menengah','🚀 Mahir'],
+    lk:['pemula total tanpa pengalaman sebelumnya','sudah tahu sedikit tapi masih sering bingung','di level menengah dengan sedikit pengalaman nyata','pelajar mahir yang ingin jauh lebih dalam'],
+    gv:['🧠 Pahami mendalam','🛠️ Buat sesuatu','🔧 Selesaikan masalah','📝 Persiapan ujian','💼 Terapkan di kerja','🏗️ Mulai dari nol'],
+    gk:['memahami konsep ini sedalam mungkin sampai bisa menjelaskan ke orang lain','benar-benar membangun sesuatu yang nyata','menyelesaikan masalah spesifik yang sedang aku hadapi','mempersiapkan diri untuk ujian atau wawancara kerja','menerapkan ini secara profesional di pekerjaan','belajar ini dengan benar dari awal'],
+    pl:'Indonesian (Bahasa Indonesia)'
+  }
+};
+['es','fr','de','pt','ar','zh','ja','hi','tr','ru'].forEach(l=>{
+  const pl={es:'Spanish',fr:'French',de:'German',pt:'Portuguese',ar:'Arabic',zh:'Chinese',ja:'Japanese',hi:'Hindi',tr:'Turkish',ru:'Russian'};
+  T[l]={...T.en,pl:pl[l]};
+});
+
+/* ════ DATA ════ */
+const SUGGS={
+  Coding:["How do I build a login page from scratch?","Explain JavaScript async/await simply","How do I make my website mobile-friendly?","I have a bug — help me understand why","What's the difference between React and plain JS?"],
+  Design:["How do I design a logo for a coffee shop?","What makes a landing page feel premium?","How do I pick colors and fonts for a brand?","Help me understand whitespace and layout","What are the principles of clean modern design?"],
+  Math:["Explain derivatives and calculus simply","How do I solve quadratic equations step by step?","Explain probability with real examples","How does linear algebra work in real life?","Explain mean, median, standard deviation"],
+  Writing:["How do I write a compelling introduction?","Teach me how to write persuasively","How do I structure a short story?","My writing feels flat — how do I fix it?","How do I write a professional email?"],
+  Language:["Teach me the most useful daily phrases","Explain the grammar rules beginners get wrong","How do I practice speaking alone at home?","What's the fastest method to build vocabulary?","How do I sound natural, not like a textbook?"],
+  Business:["Help me write a simple business plan","Explain digital marketing for zero budget","How do I price my freelance services?","What is a SWOT analysis and how do I use it?","How do I find my first customers?"],
+  Science:["Explain how DNA and genetics work simply","How does the immune system fight disease?","Explain Newton's laws with real examples","What is quantum physics and why does it matter?","How does climate change actually work?"],
+  Music:["Explain music theory from absolute zero","How do I learn to read sheet music?","What chords every guitarist must know?","How does music composition work?","Explain rhythm and time signatures"],
+  Photography:["Explain aperture, shutter speed, and ISO","How do I take great photos with my phone?","What composition rules make photos look great?","How does portrait lighting work?","What should I edit in post-processing?"],
+  'Health & Fitness':["Build a workout plan I can do at home","Explain how nutrition affects my body","How do I lose weight in a healthy way?","How does muscle growth work?","How do I build a consistent fitness routine?"],
+  History:["Explain the real causes of World War I","Why did the Roman Empire fall?","Explain colonialism and its impact today","How did the Industrial Revolution change society?","What happened during the Cold War?"],
+  Trading:["Explain candlestick charts and technical analysis","What's the difference between day and swing trading?","How do I use RSI, MACD indicators?","Explain risk management and position sizing","What mistakes do most traders make?"],
+  Investing:["Explain stocks, ETFs, and index funds","What is value vs growth investing?","How do I start investing with little money?","Show me how compound interest builds wealth","What is dollar-cost averaging?"],
+  Other:["Explain this topic from the very beginning","What are the most important things to know?","Give me a complete beginner's guide","How do experts think about this?","Create a learning roadmap for me"]
+};
+
+const BOOKS={
+  Coding:[{e:'📘',t:'Clean Code',a:'Robert C. Martin'},{e:'📗',t:"You Don't Know JS",a:'Kyle Simpson'},{e:'📙',t:'The Pragmatic Programmer',a:'Hunt & Thomas'}],
+  Design:[{e:'🎨',t:'The Design of Everyday Things',a:'Don Norman'},{e:'📘',t:"Don't Make Me Think",a:'Steve Krug'},{e:'📗',t:'Thinking with Type',a:'Ellen Lupton'}],
+  Math:[{e:'📐',t:'How to Think Like a Mathematician',a:'Kevin Houston'},{e:'📘',t:'The Art of Problem Solving',a:'Rusczyk'},{e:'📗',t:'Mathematics for the Million',a:'Hogben'}],
+  Writing:[{e:'✍️',t:'On Writing',a:'Stephen King'},{e:'📘',t:'Bird by Bird',a:'Anne Lamott'},{e:'📗',t:'The Elements of Style',a:'Strunk & White'}],
+  Language:[{e:'🌍',t:'Fluent Forever',a:'Gabriel Wyner'},{e:'📘',t:'The Language Instinct',a:'Steven Pinker'},{e:'📗',t:'How to Learn Any Language',a:'Farber'}],
+  Business:[{e:'💼',t:'Zero to One',a:'Peter Thiel'},{e:'📘',t:'The Lean Startup',a:'Eric Ries'},{e:'📗',t:'Good to Great',a:'Jim Collins'}],
+  Science:[{e:'🔬',t:'A Short History of Nearly Everything',a:'Bill Bryson'},{e:'📘',t:'The Selfish Gene',a:'Dawkins'},{e:'📗',t:'Sapiens',a:'Yuval Harari'}],
+  Music:[{e:'🎵',t:'This Is Your Brain on Music',a:'Daniel Levitin'},{e:'📘',t:'The Inner Game of Music',a:'Barry Green'},{e:'📗',t:'Music Theory for Dummies',a:'Pilhofer'}],
+  Photography:[{e:'📸',t:'Understanding Exposure',a:'Bryan Peterson'},{e:'📘',t:"The Photographer's Eye",a:'Michael Freeman'},{e:'📗',t:'Ways of Seeing',a:'John Berger'}],
+  'Health & Fitness':[{e:'💪',t:'Why We Sleep',a:'Matthew Walker'},{e:'📘',t:'Atomic Habits',a:'James Clear'},{e:'📗',t:'Outlive',a:'Peter Attia'}],
+  History:[{e:'📜',t:'Sapiens',a:'Yuval Harari'},{e:'📘',t:'Guns, Germs and Steel',a:'Jared Diamond'},{e:'📗',t:'The Lessons of History',a:'Durant'}],
+  Trading:[{e:'📈',t:'Market Wizards',a:'Jack Schwager'},{e:'📘',t:'Trading in the Zone',a:'Mark Douglas'},{e:'📗',t:'How to Make Money in Stocks',a:"O'Neil"}],
+  Investing:[{e:'💰',t:'The Intelligent Investor',a:'Benjamin Graham'},{e:'📘',t:'A Random Walk Down Wall Street',a:'Malkiel'},{e:'📗',t:'Little Book of Common Sense Investing',a:'Bogle'}],
+  Other:[{e:'🧠',t:'Ultralearning',a:'Scott Young'},{e:'📘',t:'The Art of Learning',a:'Josh Waitzkin'},{e:'📗',t:'Thinking, Fast and Slow',a:'Kahneman'}]
+};
+
+const YT={
+  Coding:[{e:'🎥',q:'javascript tutorial complete beginner 2024'},{e:'🎥',q:'how to build a web app from scratch'},{e:'🎥',q:'debugging code for beginners'}],
+  Design:[{e:'🎥',q:'logo design tutorial beginner 2024'},{e:'🎥',q:'UI UX design principles explained'},{e:'🎥',q:'Figma complete beginner guide'}],
+  Math:[{e:'🎥',q:'calculus explained visually 3Blue1Brown'},{e:'🎥',q:'statistics explained simply'},{e:'🎥',q:'math concepts for beginners'}],
+  Writing:[{e:'🎥',q:'how to improve your writing style'},{e:'🎥',q:'essay writing tips beginners'},{e:'🎥',q:'storytelling techniques explained'}],
+  Language:[{e:'🎥',q:'fastest way to learn a language 2024'},{e:'🎥',q:'language learning immersion method'},{e:'🎥',q:'vocabulary memorization techniques'}],
+  Business:[{e:'🎥',q:'how to start a business from scratch'},{e:'🎥',q:'digital marketing beginner complete guide'},{e:'🎥',q:'entrepreneur mindset tips'}],
+  Science:[{e:'🎥',q:'science explained simply and visually'},{e:'🎥',q:'physics concepts visual explanation'},{e:'🎥',q:'biology basics everyone should know'}],
+  Music:[{e:'🎥',q:'music theory for complete beginners'},{e:'🎥',q:'learn guitar chords from scratch'},{e:'🎥',q:'how to read sheet music fast'}],
+  Photography:[{e:'🎥',q:'photography basics for beginners'},{e:'🎥',q:'how to take better photos phone'},{e:'🎥',q:'manual mode camera tutorial'}],
+  'Health & Fitness':[{e:'🎥',q:'beginner workout at home no equipment'},{e:'🎥',q:'nutrition basics explained simply'},{e:'🎥',q:'how to build healthy habits science'}],
+  History:[{e:'🎥',q:'world history explained simply'},{e:'🎥',q:'key historical events documentary'},{e:'🎥',q:'why history matters today'}],
+  Trading:[{e:'🎥',q:'trading for beginners step by step'},{e:'🎥',q:'technical analysis basics candlesticks'},{e:'🎥',q:'risk management trading explained'}],
+  Investing:[{e:'🎥',q:'investing for beginners complete guide'},{e:'🎥',q:'compound interest explained visually'},{e:'🎥',q:'stock market basics simple 2024'}],
+  Other:[{e:'🎥',q:'how to learn anything fast ultralearning'},{e:'🎥',q:'self study techniques effective'},{e:'🎥',q:'learning skills improvement science'}]
+};
+
+const BEST={Coding:'d',Design:'c',Math:'d',Writing:'c',Language:'h',Business:'h',Science:'g',Music:'c',Photography:'g','Health & Fitness':'h',History:'g',Trading:'d',Investing:'d',Other:'c'};
+const BEST_MAP={c:'ai-c',h:'ai-h',g:'ai-g',d:'ai-d',r:'ai-r'};
+
+/* ════ PROMPT VARIANTS (50+) ════ */
+const P={
+  Coding:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\n${n} needs help with a coding problem and wants to truly understand it — not just copy a solution.\n\nThe problem: ${d}\nLevel: ${l}\nGoal: ${g}\n\nPlease structure your answer as a complete coding lesson:\n\n**Part 1 — The mental model.** Before any code, give the conceptual framework. How should I think about this? What mental model do professional developers use?\n\n**Part 2 — Working solution.** Full, annotated, runnable code. Every non-obvious line gets a comment. Walk through it section by section after the code block.\n\n**Part 3 — What can go wrong.** List real errors I might encounter — what they look like, what causes them, how to fix each one.\n\n**Part 4 — The professional upgrade.** How would a senior developer write this differently? What patterns, libraries, or approaches would they use?\n\nTreat me as someone serious about improving, not just looking for a quick fix.`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nCoding help for ${n}. Level: ${l}. Goal: ${g}.\nSpecific problem: "${d}"\n\nI need a thorough technical breakdown:\n\n→ Diagnose first. What's the underlying concept? What's the real reason this works the way it does?\n\n→ Show the complete implementation. No placeholders. Working code with inline commentary. Cover performance considerations if relevant.\n\n→ Edge cases. What inputs, states, or conditions would break this? How do I make it robust?\n\n→ Real-world context. Where is this pattern used in production apps? What frameworks use this under the hood?\n\n→ A challenge. Give me one exercise I can try immediately to cement this concept. Include the solution so I can verify my work.`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\n${n} is asking: "${d}"\nLevel: ${l} | Goal: ${g}\n\nTeach me this like a senior engineer explaining to a junior dev:\n\n1. ROOT CAUSE — Why does this concept exist? What problem in software development does it solve?\n\n2. THE CODE — Complete, copy-pasteable solution. No shortcuts. Comments on every meaningful line.\n\n3. LINE-BY-LINE WALKTHROUGH — After the code, go through it section by section and explain the reasoning.\n\n4. DEBUGGING GUIDE — If something breaks, what do I check first? Give me a mental checklist for this type of problem.\n\n5. NEXT STEPS — Three specific things I should study or build after mastering this, in order of importance.`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nProblem: "${d}"\nWho: ${n}, ${l} | Objective: ${g}\n\nI want to learn this concept, not just solve this one problem. Please give me:\n\n**The simplest possible example first** — the smallest code that demonstrates the concept clearly. Explain every character.\n\n**My actual solution** — full, production-ready code with explanatory comments applied to my specific case.\n\n**Two approaches** — show the beginner-friendly way first, then the more elegant/professional way. Explain why they differ and when you'd use each.\n\n**Common traps** — four mistakes developers make with this exact concept. Show the wrong code and correct it.\n\n**The 30-second summary** — if I had to explain this concept to someone in 30 seconds, what would I say?`
+  ],
+
+  Design:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\n${n} is working on a design project and needs guidance that goes beyond generic tips.\n\nProject: "${d}"\nLevel: ${l} | Objective: ${g}\n\nRespond like a senior creative director consulting a junior designer:\n\n**Creative strategy first.** What is this design trying to communicate? Who is it for? What emotion should it trigger? Help me think strategically before aesthetically.\n\n**Visual principles for this project.** Which specific principles — hierarchy, contrast, colour psychology, typography, whitespace — are most critical here? Apply them directly to my situation.\n\n**Step-by-step process.** From blank canvas to finished design — what is the professional workflow for this type of project?\n\n**What kills it.** What design choices would make this look amateur vs professional? Be specific and show me the contrast.\n\n**Free tools and real references.** What can I use to build this? What existing designs should I study?`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nDesign challenge: "${d}"\nDesigner: ${n}, ${l} | Goal: ${g}\n\nI need answers across four pillars:\n\n**Colour and typography.** A specific palette approach and font pairing for this exact project. Explain the psychology behind every choice. Not generic — specific to what I'm building.\n\n**Layout and composition.** Describe the visual structure I should use. Where does the eye go first? How do I create a sense of order and elegance? What spatial relationships between elements?\n\n**The gap between good and great.** Describe a mediocre version of this design versus a polished, professional version. Be specific about the details that separate them.\n\n**Self-critique framework.** Five questions I can ask myself to evaluate whether my design is working. Help me develop my own critical eye.`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nI'm designing: "${d}"\nLevel: ${l} | Goal: ${g}\n\nI want a complete design framework:\n\n**Strategy layer.** What problem does this design solve? For whom? What does success look like for the viewer?\n\n**Visual identity.** For this specific project: what colours carry the right associations? What typefaces communicate the right personality? What visual style — minimal, bold, editorial, playful, corporate — fits?\n\n**Composition and structure.** How should I arrange the elements? Walk me through the decision-making process a professional would use, step by step.\n\n**The iteration process.** How do designers go from a rough draft to a refined final? Give me a realistic 5-step revision process with what to evaluate at each stage.\n\n**Studying great design.** How do I analyse excellent work in this genre without just copying it? What do I look for?`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nDesign brief for ${n}: "${d}"\nBackground: ${l} | Desired outcome: ${g}\n\nGive me a thorough design consultation:\n\n**Brief interpretation.** Restate what I'm designing in your own words to confirm understanding. Identify the core design challenge.\n\n**Colour psychology deep dive.** For my project, describe primary, secondary, and accent colour approaches. Explain the psychological associations of each choice.\n\n**Typography hierarchy.** Heading + body + accent font strategy. Why do these fonts work together? What personality do they communicate?\n\n**Layout grid and spacing.** How do professionals structure layouts like this? What grid system should I use? How does spacing create quality?\n\n**10 things that make this look expensive vs cheap.** The micro-details that separate premium design from mediocre work in this specific category.`
+  ],
+
+  Math:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\n${n} wants to genuinely understand this math concept, not just memorise a formula.\n\nTopic: "${d}"\nLevel: ${l} | Goal: ${g}\n\nTeach me like the teacher I wish I had:\n\n**Intuition before formulas.** Before any notation, explain what this concept actually means. Why does it exist? What real problem does it solve? Make it feel necessary, not arbitrary.\n\n**Build from the ground up.** Start from what I likely know. Connect each new idea to the previous one. Never skip a step.\n\n**Worked examples — at least five.** Easy → medium → tricky → the kind that trips people up → a real-world application. For every example: narrate each step, don't just show the algebra.\n\n**The mistakes people make.** What does the wrong approach look like? Why do students make these specific errors? Show the incorrect version and correct it.\n\n**A practice problem I can try.** One problem with the solution hidden at the end so I can check my work.`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nMath question from ${n}: "${d}"\nLevel: ${l} | Objective: ${g}\n\nTeach me through these four phases:\n\n**Phase 1 — Real-world meaning.** Three concrete, non-textbook examples of where this math appears in actual life, work, or science. Make it feel real.\n\n**Phase 2 — The formal method.** The mathematical approach: notation, formulas, procedure. Explain every symbol. Show the formula and explain WHY it's mathematically valid, not just how to use it.\n\n**Phase 3 — Six worked problems.** Progressive difficulty. For each: show every step, label what you're doing, explain why.\n\n**Phase 4 — Memory and mastery.** Give me a mnemonic, mental shortcut, or visual trick to remember and apply this correctly. Then give me three unsolved problems with answers at the end.`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nMath tutoring for ${n}.\nQuestion: "${d}" | Level: ${l} | Goal: ${g}\n\nI learn best when I understand the story behind it:\n\n**History or context first.** How did mathematicians discover this? What problem were they trying to solve? Understanding origin makes it stick.\n\n**Visual or geometric intuition.** Can this be drawn, visualised, or described spatially? Describe the mental picture even without images.\n\n**The algebraic method.** Step by step, with full explanation of every operation and why it's valid at each stage.\n\n**Common student errors — at least four.** Show the wrong work, identify exactly where it goes wrong, and show the correction.\n\n**Self-assessment question.** One question I can answer to test whether I truly understood this, not just followed the steps.`
+  ],
+
+  Writing:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nWriting masterclass for ${n}.\nTask: "${d}" | Level: ${l} | Goal: ${g}\n\nApproach this like a one-on-one session with a writing coach:\n\n**What makes this type of writing work.** What do readers actually want? What are the unspoken expectations of this format?\n\n**The planning method.** How do professional writers approach this before typing a word? Walk me through the process.\n\n**Structure and architecture.** Give me a detailed outline with a clear purpose for each section — not just what goes where, but why.\n\n**Craft at the sentence level.** Three specific techniques for making sentences more vivid, precise, and engaging. Show before/after examples.\n\n**An example opening.** Write a demonstration opening paragraph for my topic. Then annotate why each sentence works.`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nWriting help: "${d}"\n${n}, ${l} | Goal: ${g}\n\nI want principles I can apply forever, not just a template:\n\n**The philosophy of good writing in this genre.** What separates memorable work from forgettable work? What do the best writers in this space do that beginners don't?\n\n**The structural framework.** Detailed template with guidance for each section. Not just headers — explain the craft decision behind each structural choice.\n\n**Five writing moves to learn.** How to open with impact, build tension or argument, use concrete detail, vary rhythm, land the ending.\n\n**Demonstration passage.** Write 150-200 words in the style I need. Then annotate it line by line.\n\n**The pitfalls.** Five things that will kill the effectiveness of this writing, with specific examples of what not to do.`
+  ],
+
+  Language:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nLanguage learning session for ${n}.\nFocus: "${d}" | Level: ${l} | Goal: ${g}\n\nDesign this like a focused language lesson:\n\n**Essential vocabulary.** 20 words and phrases directly relevant to my focus. For each: the word, phonetic pronunciation, meaning, and one natural example sentence.\n\n**The key grammar pattern.** The most important grammatical structure I need. Explain the formula, give 8 example sentences from simple to complex.\n\n**Natural vs textbook.** Show me the textbook version of 5 common phrases and what native speakers actually say. This gap is where fluency lives.\n\n**A realistic dialogue.** 10-12 natural exchanges on my topic, with translation and cultural notes a foreigner would need.\n\n**30-day practice plan.** Specific, actionable daily habits including free apps and methods. No vague advice.`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nI want to actually speak this language, not just pass a test.\n\nFocus: "${d}" | ${n}, ${l} | Goal: ${g}\n\n**Pronunciation system.** Sounds that don't exist in my likely native language. Rules for stress, intonation, rhythm. Specific exercises to train my mouth and ear.\n\n**80/20 vocabulary.** Words and phrases appearing in the largest percentage of natural conversation. Teach high-leverage items first.\n\n**Grammar as patterns, not rules.** How one pattern unlocks dozens of sentences. Focus on patterns giving the most expressive power at my level.\n\n**Cultural context.** What would sound rude, overly formal, or strange to a native speaker? What cultural knowledge do I need to use this language appropriately?\n\n**Immersion on a budget.** Ten specific, free methods to expose myself to natural input every day, even if I don't live in a country where it's spoken.`
+  ],
+
+  Business:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nBusiness consultation for ${n}.\nChallenge: "${d}" | Level: ${l} | Goal: ${g}\n\nRespond as a seasoned entrepreneur giving honest, direct advice:\n\n**The real landscape.** What's the business environment around this topic? Key players, trends, opportunities, and threats right now.\n\n**Three strategic paths.** Each with a different risk/reward profile: describe the approach, upside, risks, resources needed, and who it suits best.\n\n**The 90-day execution blueprint.** For the most practical option — concrete milestones and specific actions.\n\n**The financial picture.** Real cost drivers, revenue models, and financial metrics. Realistic numbers where possible.\n\n**Fatal mistakes in this situation.** Three or four common errors entrepreneurs make here, with early warning signs to watch for.`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nBusiness question: "${d}"\n${n}, ${l} | Goal: ${g}\n\nMentor-level, direct advice — no textbook theory:\n\n**What I actually need to understand.** The business concept at the core of this question, explained without jargon.\n\n**Real-world examples.** Two or three businesses that faced this exact situation. What did they do? What worked? What failed?\n\n**A practical framework.** Step-by-step process I can follow in my own situation.\n\n**The money question.** How does this connect to making or protecting money? What are the financial implications?\n\n**My 30-day action plan.** Specific things to do in week 1, week 2, week 3, and week 4 to make real progress.`
+  ],
+
+  Science:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nScience deep dive for ${n}.\nTopic: "${d}" | Level: ${l} | Goal: ${g}\n\nTeach me like a scientist who loves their subject:\n\n**Why this matters.** What fundamental question of the universe or practical problem of humanity does this science address?\n\n**First principles.** Start from what I likely understand and connect each new concept to the previous one. Use analogies relentlessly.\n\n**The full mechanism.** The actual process — physics, chemistry, or biology — step by step with precision and clarity.\n\n**Real-world applications.** Five specific places this science appears in technology, medicine, or everyday experience that would genuinely surprise me.\n\n**Correcting the misconceptions.** What does popular science get wrong? What does the actual data show?`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nScience lesson: "${d}"\n${n}, ${l} | Objective: ${g}\n\nTeach me the way a scientist understands it — not just facts, but reasoning:\n\n**The history of discovery.** How did scientists figure this out? Key experiments, breakthrough moments, what they believed before. History turns facts into stories.\n\n**Current scientific consensus.** What's well-established? What's the strength of evidence? What would change scientists' confidence?\n\n**The frontier.** What remains unknown? What are researchers actively investigating right now?\n\n**The implications.** If this science is correct, what does it mean for how we understand the universe, ourselves, or technology?\n\n**Mind-bending facts.** Five genuinely surprising, counterintuitive things about this topic that most people don't know.`
+  ],
+
+  Music:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nMusic lesson for ${n}.\nFocus: "${d}" | Level: ${l} | Goal: ${g}\n\nTeach this like a world-class music teacher who loves the craft:\n\n**Sound before theory.** Describe what this concept sounds like before explaining what it is. Reference well-known songs that demonstrate it. The ear comes before the mind.\n\n**The theory.** Musical concept with precision — notes, intervals, patterns. Use the piano keyboard as reference and describe it spatially. Define every term.\n\n**Instrument application.** How to use this on common instruments with specific, playable examples.\n\n**Composition angle.** How songwriters and composers use this creatively. Show how understanding this opens new possibilities.\n\n**Practice routine.** 20 minutes per day, specific exercises, specific things to listen for. Something I can start tonight.`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nMusic education: "${d}"\n${n}, ${l} | Goal: ${g}\n\n**Ear training first.** Three or four famous songs demonstrating what I'm learning about. For each: describe specifically where and how the concept appears, and what to listen for.\n\n**The theory from scratch.** Build theoretical understanding assuming nothing. Define everything. Show patterns on a piano keyboard (describe it visually).\n\n**Notation and reading.** How is this written in standard notation? How do I read and write it?\n\n**Across musical styles.** How is this used differently in classical vs jazz vs pop vs blues? This makes theory feel alive.\n\n**Structured practice exercises.** Drills, creative exercises, and a performance test I can do for myself to assess my understanding.`
+  ],
+
+  Photography:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nPhotography lesson for ${n}.\nFocus: "${d}" | Level: ${l} | Goal: ${g}\n\nHelp me learn to see the way a photographer sees:\n\n**The visual principle.** What is the artistic or compositional concept at the heart of my question? How do great photographers think about this?\n\n**The technical side.** Camera mechanics and settings — explained like a physicist explaining optics, not a manual listing specs. I want to understand WHY settings do what they do.\n\n**Step-by-step shooting guide.** Camera settings, positioning, timing, lighting, what to look for before pressing the shutter — for my specific type of image.\n\n**Post-processing.** What specific edits should I make? Name each adjustment and explain what it does visually.\n\n**30-day shooting challenge.** Specific assignments that build this skill progressively.`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nPhotography question: "${d}"\n${n}, ${l} | Goal: ${g}\n\n**Light.** Everything starts with light. Direction, quality, colour temperature, how to read a scene, how to use it intentionally for my type of photography.\n\n**The exposure triangle in context.** Not definitions — practical application. When do I prioritise aperture over shutter speed? When does ISO actually degrade quality? Use my specific photography context as the example.\n\n**Composition — five principles.** For each: explain it, why it works psychologically, and a specific practice exercise.\n\n**Common technical failures.** Six most common problems with this type of photography, their causes, and how to prevent or fix them.\n\n**Developing a visual voice.** How do great photographers develop a recognisable style while still growing? What questions should I ask myself about what I find beautiful?`
+  ],
+
+  'Health & Fitness':[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nFitness consultation for ${n}.\nQuestion: "${d}" | Level: ${l} | Goal: ${g}\n\nRespond as a certified trainer who cares about sustainable results:\n\n**The physiology.** What actually happens in the body related to my question at the cellular, muscular, hormonal, or metabolic level? Understanding biology makes training decisions obvious.\n\n**The personalised plan.** Specific training or lifestyle plan: schedule, exercises, progressions, rest protocols. Not generic.\n\n**Nutrition dimension.** What to eat, when, roughly how much, for my specific goal. Key macronutrient principles without being rigid.\n\n**Recovery framework.** Sleep, mobility, stress management — what matters most for my specific goal?\n\n**Progress checkpoints.** Specific, measurable benchmarks at 4, 8, and 12 weeks to know if this is working.`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nHealth and fitness: "${d}"\n${n}, ${l} | Goal: ${g}\n\nEvidence-based guidance, not magazine advice:\n\n**What research actually says.** What does current sports science tell us? What's established vs still debated? Be honest about uncertainty.\n\n**Custom program.** Complete, realistic program with exercises, sets, reps, rest, frequency, and how to progress over time.\n\n**Form and technique.** For key movements — describe perfect form. What are the most common errors that cause injury or wasted effort?\n\n**Lifestyle factors.** Sleep, stress, hydration, movement throughout the day. Which factors have the biggest impact at my level?\n\n**Troubleshooting.** If I follow this for six weeks and see no results — the five most likely reasons and how to diagnose and fix each one.`
+  ],
+
+  History:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nHistory deep dive for ${n}.\nTopic: "${d}" | Level: ${l} | Goal: ${g}\n\nTell history as a great storyteller would — not as a list of dates, but as a story with causes, consequences, human drama, and lasting meaning:\n\n**The world before.** What were the conditions, tensions, and ambitions that made these events possible?\n\n**The full narrative.** Key figures as human beings with personalities and flaws. Turning points where history could have gone differently.\n\n**Real causes.** Separate immediate triggers from deep structural forces. What long-term pressures made these events almost inevitable?\n\n**Consequences to today.** Direct lines from these events to things we see in the world right now. As concrete and specific as possible.\n\n**Myths vs reality.** What does serious historical scholarship show that contradicts the popular narrative?`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nHistorical question: "${d}"\n${n}, ${l} | Goal: ${g}\n\nApproach as a master historian who believes understanding the past is essential to understanding the present:\n\n**The world before.** Political, economic, social, and cultural landscape. Who held power? Who didn't? What were the fault lines?\n\n**Key actors.** Five to seven most important figures: background, motivations, choices, and specific moments where their decisions mattered.\n\n**Structural forces.** Beyond individual decisions — economic systems, geography, technology, demographics that shaped events.\n\n**Contested interpretations.** Where do historians disagree? What evidence supports each view? Complexity hidden by textbooks.\n\n**The living legacy.** Conflicts, institutions, borders, identities alive today that trace directly to these events.`
+  ],
+
+  Trading:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n⚠️ Educational only — not financial advice.\n\nTrading education for ${n}.\nFocus: "${d}" | Level: ${l} | Goal: ${g}\n\nTeach trading the way a professional would teach an apprentice:\n\n**Market mechanics.** How does this market actually work? Who are the participants? How is price determined? What drives volume and volatility?\n\n**Technical analysis toolkit.** The concepts I asked about — theory, how to read them on a chart, the setups with highest reliability, and when they FAIL and why.\n\n**A complete trading strategy.** Specific, rules-based: exact entry conditions, stop-loss placement, profit target, and when it works vs doesn't.\n\n**Risk management — the most important lesson.** Position sizing, maximum loss per trade, drawdown rules. Show me the math of why risk management determines long-term survival.\n\n**Psychology traps.** What cognitive biases destroy trading accounts? How do professional traders manage emotional responses to losses and wins?`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n⚠️ Educational only — not financial advice.\n\nTrading question: "${d}"\n${n}, ${l} | Goal: ${g}\n\n**What actually moves markets.** Beyond supply and demand — institutional order flow, news events, liquidity, market maker behaviour. What is a retail trader actually up against?\n\n**Reading price action.** Trend structure, key levels, candlestick patterns, volume analysis. What is the chart telling me about the battle between buyers and sellers?\n\n**Building and testing an edge.** What does having a statistical edge mean? How do traders backtest strategies?\n\n**Professional trader's routine.** Pre-market preparation, trade management, post-session review. What do consistently profitable traders actually do with their time?\n\n**Honest statistics.** What percentage of retail traders are profitable over one and five years? What separates the few who succeed?`
+  ],
+
+  Investing:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n⚠️ Educational only — not financial advice.\n\nInvesting education for ${n}.\nQuestion: "${d}" | Level: ${l} | Goal: ${g}\n\nTeach investing from first principles:\n\n**What investing actually is.** Not definitions — why investing creates wealth over time. What is the source of investment returns? Why does a business create value?\n\n**The asset classes.** Stocks, bonds, real estate, index funds — honestly: what each represents, historical return, real risk, and who it suits.\n\n**Compound interest with real numbers.** Show calculations of regular investing over 10, 20, and 30 years at various return rates. Make the power of time visceral.\n\n**The investor psychology problem.** Why do most individual investors underperform the market? What emotional mistakes destroy returns?\n\n**Practical starting guide.** Step by step — how does ${n} actually start investing today? What accounts, platforms, and first investments?`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n⚠️ Educational only — not financial advice.\n\nInvesting question: "${d}"\n${n}, ${l} | Goal: ${g}\n\n**The two great philosophies.** Value investing (Graham, Buffett) and index investing (Bogle) — fully explained, with evidence, legendary practitioners, results over time, and honest limitations.\n\n**How to analyse an investment.** Basics of fundamental analysis: balance sheet reading, P/E ratio, revenue growth, competitive advantage. Teach me to think, not just look up numbers.\n\n**The role of macroeconomics.** How interest rates, inflation, and economic cycles affect different investments. Why markets sometimes rise when the economy seems bad.\n\n**Portfolio construction.** Diversification, asset allocation, rebalancing — what these mean in practice.\n\n**The costs that silently destroy wealth.** Show with real math how expense ratios, fees, taxes, and inflation affect returns. Small percentages have enormous consequences over decades.`
+  ],
+
+  Other:[
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nLearning request from ${n}.\nTopic: "${d}" | Level: ${l} | Goal: ${g}\n\nI want a genuinely comprehensive response that respects how much I want to actually understand this.\n\n**First principles.** What are the most fundamental ideas everything else in this topic builds on? Why do they matter?\n\n**Build the full picture progressively.** Start from what I likely know and connect each new concept to the previous one, moving from simple to complex without skipping steps.\n\n**Real, concrete examples at every stage.** Not abstract explanations — show how these ideas appear in the world.\n\n**The common confusion points.** What do beginners typically misunderstand? What does thinking about it correctly actually look like?\n\n**Clear path forward.** What should I study, practise, or explore next to continue building genuine expertise?`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nDeep learning request: "${d}"\n${n}, ${l} | Goal: ${g}\n\nPlease design this as a proper educational session:\n\n**The conceptual foundation.** What mental model or framework should I hold in my head? Give me the map before the territory.\n\n**The core knowledge.** Systematically walk through the essential knowledge, building from simple to complex. Thorough is better than brief here.\n\n**The practical dimension.** How is this applied in practice? What do skilled people in this area actually do, in concrete and specific terms?\n\n**The expert's perspective.** How do genuine experts think about this differently from beginners? What changes after 10 years of mastery?\n\n**A learning path.** If I wanted to develop real expertise, what would the next six months of learning look like?`,
+
+    (n,l,g,d,pl)=>`Please respond entirely in ${pl}.\n\nI need to genuinely understand: "${d}"\nLevel: ${l} | Goal: ${g}\n\n**Frame the question correctly.** What is the real question here, and what would a genuinely comprehensive answer need to cover?\n\n**Explain from first principles** without assuming prior knowledge. Every concept that isn't common knowledge should be explained.\n\n**Analogies, examples, and concrete cases throughout** — not as decoration but as the primary vehicle for understanding.\n\n**Address counterintuitive aspects directly.** What about this topic surprises people who study it? What seems true but isn't?\n\n**Synthesise at the end.** Three to five most important takeaways. The single most important insight from your entire explanation.`
+  ]
+};
+
+/* ════ LANG SETUP ════ */
+function setLang(l){
+  lang=l;
+  const t=T[l]||T.en;
+  document.body.style.direction=l==='ar'?'rtl':'ltr';
+  for(let i=1;i<=4;i++){
+    const el=k=>document.getElementById(k+i);
+    if(el('sn'))el('sn').textContent=t.sn[i-1];
+    if(el('sq'))el('sq').textContent=t.sq[i-1];
+    if(el('sh'))el('sh').textContent=t.sh[i-1];
+  }
+  document.getElementById('det').placeholder=t.ta;
+  document.getElementById('bb2').textContent=t.bb;document.getElementById('bn2').textContent=t.bn;
+  document.getElementById('bb3').textContent=t.bb;document.getElementById('bn3').textContent=t.bn;
+  document.getElementById('bb4').textContent=t.bb;document.getElementById('bn4').textContent=t.bld;
+  document.getElementById('sl').textContent=t.sl;
+  document.getElementById('cl').textContent=t.cb;
+  document.getElementById('rst').textContent=t.rst;
+  buildChips();
+}
+
+/* ════ CHIP BUILDERS ════ */
+function buildChips(){
+  const t=T[lang]||T.en;
+  // Topics
+  const tc=document.getElementById('tc');tc.innerHTML='';
+  t.tc.forEach((label,i)=>{
+    const key=t.tk[i];
+    const d=document.createElement('div');
+    d.className='ch'+(st.topicKey===key?' on':'');
+    d.textContent=label;
+    d.onclick=()=>{
+      st.topicKey=key;
+      st.topic=key==='Other'?'':label;
+      tc.querySelectorAll('.ch').forEach(c=>c.classList.remove('on'));
+      d.classList.add('on');
+      document.getElementById('ot-wrap').style.display=key==='Other'?'block':'none';
+    };
+    tc.appendChild(d);
+  });
+  // Levels
+  const lc=document.getElementById('lc');lc.innerHTML='';
+  t.lv.forEach((label,i)=>{
+    const d=document.createElement('div');
+    d.className='ch'+(st.level===t.lk[i]?' on':'');
+    d.textContent=label;
+    d.onclick=()=>{st.level=t.lk[i];lc.querySelectorAll('.ch').forEach(c=>c.classList.remove('on'));d.classList.add('on');};
+    lc.appendChild(d);
+  });
+  // Goals
+  const gc=document.getElementById('gc');gc.innerHTML='';
+  t.gv.forEach((label,i)=>{
+    const d=document.createElement('div');
+    d.className='ch'+(st.goal===t.gk[i]?' on':'');
+    d.textContent=label;
+    d.onclick=()=>{st.goal=t.gk[i];gc.querySelectorAll('.ch').forEach(c=>c.classList.remove('on'));d.classList.add('on');};
+    gc.appendChild(d);
+  });
+}
+
+function buildSuggs(key){
+  const sc=document.getElementById('sc');sc.innerHTML='';
+  (SUGGS[key]||SUGGS.Other).forEach(s=>{
+    const d=document.createElement('button');
+    d.className='sug';d.textContent=s;
+    d.onclick=()=>{
+      document.getElementById('det').value=s;
+      document.getElementById('cc').textContent=s.length+' / 500';
+    };
+    sc.appendChild(d);
+  });
+}
+
+/* ════ NAVIGATION ════ */
+function go(dir){
+  const t=T[lang]||T.en;
+  if(dir>0){
+    if(curStep===1){
+      if(!st.topicKey){toast(t.nt,'b');return;}
+      if(st.topicKey==='Other'&&!document.getElementById('ot').value.trim()){toast('Type your topic!','b');return;}
+    }
+    if(curStep===2&&!st.level){toast(t.nl,'b');return;}
+    if(curStep===3&&!st.goal){toast(t.ng,'b');return;}
+  }
+  document.getElementById('s'+curStep).classList.remove('on');
+  curStep+=dir;
+  document.getElementById('s'+curStep).classList.add('on');
+  document.getElementById('pf').style.width=((curStep-1)/4*100)+'%';
+  if(curStep===4)buildSuggs(st.topicKey);
+  window.scrollTo({top:document.getElementById('app').offsetTop-20,behavior:'smooth'});
+}
+
+/* ════ BUILD PROMPT ════ */
+function getVariants(key){return P[key]||P.Other;}
+
+function generatePrompt(idx){
+  const t=T[lang]||T.en;
+  const variants=getVariants(st.topicKey);
+  const i=idx!=null?idx%variants.length:Math.floor(Math.random()*variants.length);
+  usedIdx=i;
+  const topic=st.topicKey==='Other'?(document.getElementById('ot').value.trim()||'my topic'):st.topicKey;
+  return variants[i](prof.name||'You',st.level,st.goal,st.details,t.pl||'English');
+}
+
+function build(){
+  const t=T[lang]||T.en;
+  st.details=document.getElementById('det').value.trim();
+  if(st.topicKey==='Other')st.topic=document.getElementById('ot').value.trim()||'Custom Topic';
+  if(!st.details){toast(t.nd,'r');return;}
+  document.getElementById('s4').classList.remove('on');
+  document.getElementById('res').style.display='block';
+  document.getElementById('pf').style.width='100%';
+  curPrompt=generatePrompt();
+  renderResult();
+  setTimeout(()=>document.getElementById('res').scrollIntoView({behavior:'smooth'}),80);
+}
+
+function regen(){
+  const variants=getVariants(st.topicKey);
+  curPrompt=generatePrompt((usedIdx+1)%variants.length);
+  renderResult();
+}
+
+function renderResult(){
+  const t=T[lang]||T.en;
+  document.getElementById('pt').textContent=curPrompt;
+  const words=curPrompt.split(/\s+/).length;
+  document.getElementById('wc').textContent=words+' words';
+  const topicLabel=st.topicKey==='Other'?st.topic:st.topicKey;
+  document.getElementById('pb').textContent=`${topicLabel} — ${prof.name||'You'}`;
+  document.getElementById('ci').textContent='📋';
+  document.getElementById('cl').textContent=t.cb;
+  document.getElementById('cb').classList.remove('done');
+  // best AI
+  document.querySelectorAll('.ai-b').forEach(b=>b.classList.remove('best'));
+  const bk=BEST[st.topicKey]||'c';
+  const el=document.getElementById(BEST_MAP[bk]);if(el)el.classList.add('best');
+  // gallery resources
+  buildGallery(topicLabel);
+}
+
+/* ════ GALLERY RESOURCES ════ */
+function buildGallery(topicKey){
+  const key=BOOKS[topicKey]?topicKey:'Other';
+  const books=BOOKS[key]||BOOKS.Other;
+  const yt=YT[key]||YT.Other;
+
+  let html=`<div class="gc-section">
+    <div class="gc-title">📚 Recommended Books</div>
+    <div class="gc-row">`;
+  books.forEach(b=>{
+    html+=`<div class="gc-card">
+      <div class="gc-top">${b.e}</div>
+      <div class="gc-static"><div class="gc-name">${b.t}</div><div class="gc-auth">${b.a}</div></div>
+      <div class="gc-bot"><div class="gc-name">${b.t}</div><div class="gc-auth">${b.a}</div></div>
+    </div>`;
+  });
+  html+=`</div></div>
+  <div class="gc-section">
+    <div class="gc-title">▶️ Watch on YouTube</div>
+    <div class="gc-row">`;
+  yt.forEach(v=>{
+    const url=`https://www.youtube.com/results?search_query=${encodeURIComponent(v.q)}`;
+    html+=`<div class="gc-card">
+      <div class="gc-top">${v.e}</div>
+      <div class="gc-static"><div class="gc-name" style="font-size:.7rem;line-height:1.35;">${v.q}</div></div>
+      <div class="gc-bot"><div class="gc-name" style="font-size:.7rem;line-height:1.35;margin-bottom:.4rem;">${v.q}</div><a class="gc-link" href="${url}" target="_blank" rel="noopener">Search on YouTube →</a></div>
+    </div>`;
+  });
+  html+=`</div></div>`;
+  document.getElementById('rg').innerHTML=html;
+}
+
+/* ════ COPY ════ */
+function copyP(){
+  const t=T[lang]||T.en;
+  cp(curPrompt).then(ok=>{
+    if(ok!==false){
+      document.getElementById('ci').textContent='✅';
+      document.getElementById('cl').textContent=t.cd||'✅ Copied!';
+      document.getElementById('cb').classList.add('done');
+      setTimeout(()=>{
+        document.getElementById('ci').textContent='📋';
+        document.getElementById('cl').textContent=t.cb;
+        document.getElementById('cb').classList.remove('done');
+      },2500);
+      toast('Prompt copied to clipboard!','g');
+    }
+  });
+}
+
+function openAI(name,url){
+  cp(curPrompt).then(()=>{
+    const dest=name==='claude'?`https://claude.ai/new?q=${encodeURIComponent(curPrompt)}`:url;
+    window.open(dest,'_blank');
+    const label={claude:'Claude',chatgpt:'ChatGPT',gemini:'Gemini',deepseek:'DeepSeek',grok:'Grok'}[name];
+    toast(`Opening ${label} — prompt copied!`,'g');
+  });
+}
+
+function toast(msg,type='b'){
+  const el=document.getElementById('toast');
+  el.className=`toast t${type}`;
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+function startApp(){
+  document.getElementById('hero').style.display='none';
+  document.getElementById('app').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function restart(){
+  Object.keys(st).forEach(k=>st[k]='');
+  curPrompt='';curStep=1;usedIdx=-1;
+  document.querySelectorAll('.sw').forEach(s=>s.classList.remove('on'));
+  document.getElementById('det').value='';
+  document.getElementById('ot').value='';
+  document.getElementById('ot-wrap').style.display='none';
+  document.getElementById('cc').textContent='0 / 500';
+  document.getElementById('res').style.display='none';
+  document.getElementById('s1').classList.add('on');
+  document.getElementById('pf').style.width='0%';
+  buildChips();
+  document.getElementById('hero').style.display='none';
+  document.getElementById('app').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+document.getElementById('det').addEventListener('input',function(){
+  document.getElementById('cc').textContent=this.value.length+' / 500';
+});
+document.getElementById('ot').addEventListener('input',function(){
+  st.topic=this.value.trim();
+});
+
+/* ════ INIT ════ */
+(async()=>{
+  const nav=navigator.language||'en';
+  const ml={id:'id',es:'es',fr:'fr',de:'de',pt:'pt',ar:'ar',zh:'zh',ja:'ja',hi:'hi',tr:'tr',ru:'ru'};
+  lang=Object.keys(ml).find(k=>nav.startsWith(k))||'en';
+  document.getElementById('ls').value=lang;
+  setLang(lang);
+  const has=await loadProf();
+  if(has&&prof.name){
+    document.getElementById('pm').style.display='none';
+    document.getElementById('hero').style.display='flex';
+    document.querySelector('#hero h1').innerHTML=`Welcome back,<br><span>${prof.name}.</span>`;
+  }
+})();
+</script>
+</body>
+</html>
